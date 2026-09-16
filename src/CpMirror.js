@@ -6,14 +6,14 @@
 // A few hundred rows comfortably fits one getValues()/setValues() pair, so
 // unlike a large mirror this needs no chunking or resume logic.
 function mirrorCpMaster() {
-  var cpWorkbook = SpreadsheetApp.openById(CONFIG.CP_WORKBOOK_SHEET_ID);
-  var source = cpWorkbook.getSheetByName(CONFIG.CP_MASTER_SHEET_NAME);
-  if (!source || source.getLastRow() < 2) {
-    Logger.log('CP Master has no data rows — nothing to mirror.');
-    return;
-  }
-
   try {
+    var cpWorkbook = SpreadsheetApp.openById(CONFIG.CP_WORKBOOK_SHEET_ID);
+    var source = cpWorkbook.getSheetByName(CONFIG.CP_MASTER_SHEET_NAME);
+    if (!source || source.getLastRow() < 2) {
+      Logger.log('CP Master has no data rows — nothing to mirror.');
+      return;
+    }
+
     var targetSs = SpreadsheetApp.openById(CONFIG.MASTER_SERVICE_SHEET_ID);
     var target = targetSs.getSheetByName(CONFIG.CP_MIRROR_SHEET_NAME);
     if (!target) {

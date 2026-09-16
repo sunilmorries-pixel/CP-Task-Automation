@@ -108,8 +108,8 @@ function appendCpSyncLogEntry_(ss, entry) {
 }
 
 function consolidateCpTasks() {
-  var cpWorkbook = SpreadsheetApp.openById(CONFIG.CP_WORKBOOK_SHEET_ID);
   try {
+    var cpWorkbook = SpreadsheetApp.openById(CONFIG.CP_WORKBOOK_SHEET_ID);
     var sourceSs = SpreadsheetApp.openById(CONFIG.CP_SOURCE_SHEET_ID);
     var rowsByTab = {};
     var allRows = [];
@@ -150,10 +150,12 @@ function consolidateCpTasks() {
   } catch (err) {
     var errMessage = (err && err.message) || String(err);
     sendErrorAlert_('CP consolidation failed', errMessage);
-    appendCpSyncLogEntry_(cpWorkbook, {
-      timestamp: new Date(), rowsRead2025: '', rowsRead2026: '',
-      rowsWritten: 0, tatRepaired: 0, status: 'Error: ' + errMessage
-    });
+    if (cpWorkbook) {
+      appendCpSyncLogEntry_(cpWorkbook, {
+        timestamp: new Date(), rowsRead2025: '', rowsRead2026: '',
+        rowsWritten: 0, tatRepaired: 0, status: 'Error: ' + errMessage
+      });
+    }
     return;
   }
 
