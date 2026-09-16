@@ -16,7 +16,7 @@
 // different project's sheet (a typo'd tab name silently resolving to the
 // wrong existing tab).
 function resolveCpSourceTab_(ss, tabName) {
-  var sheet = ss.getSheets().filter(function (s) { return s.getName() === tabName; })[0];
+  var sheet = resolveSheetByExactName_(ss, tabName);
   if (!sheet) {
     throw new Error('CP source tab not found: "' + tabName + '". Check '
       + 'CONFIG.CP_SOURCE_TAB_NAMES against the actual tab names in the '
@@ -42,12 +42,20 @@ function readCpSourceTab_(sheet, tabName) {
     throw new Error('Source tab "' + tabName + '" is missing expected column(s): '
       + missing.join(', '));
   }
-  var dataRows = values.slice(1).filter(function (rowValues) {
-    return rowValues.some(function (v) { return v !== '' && v !== null; });
-  });
+  // A row counts as real data only if at least one column OTHER than
+  // "TAT in days" is populated — a formula dragged past the last real row
+  // leaves a trailing "blank" row with a non-empty TAT cell (e.g. -46013),
+  // which would otherwise survive a naive emptiness check and both pollute
+  // CP Master and inflate tatRepairedCount below.
+  var dataRows = values.slice(1)
+    .map(function (rowValues) { return mapCpRow(headers, rowValues); })
+    .filter(function (raw) {
+      return CP_SOURCE_COLUMNS.some(function (col) {
+        return col !== 'TAT in days' && raw[col] !== '' && raw[col] !== null;
+      });
+    });
   var tatRepairedCount = 0;
-  var rows = dataRows.map(function (rowValues) {
-    var raw = mapCpRow(headers, rowValues);
+  var rows = dataRows.map(function (raw) {
     var normalized = normalizeCpRow(raw, tabName);
     var sourceTat = Number(raw['TAT in days']);
     if (isFinite(sourceTat) && sourceTat < 0 && normalized['TAT in days'] !== sourceTat) {
@@ -59,7 +67,7 @@ function readCpSourceTab_(sheet, tabName) {
 }
 
 function ensureCpMasterSheet_(ss) {
-  var sheet = ss.getSheetByName(CONFIG.CP_MASTER_SHEET_NAME);
+  var sheet = resolveSheetByExactName_(ss, CONFIG.CP_MASTER_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.CP_MASTER_SHEET_NAME);
   }
@@ -89,7 +97,7 @@ function writeCpMaster_(sheet, rows) {
 }
 
 function ensureCpSyncLogSheet_(ss) {
-  var sheet = ss.getSheetByName(CONFIG.CP_SYNC_LOG_SHEET_NAME);
+  var sheet = resolveSheetByExactName_(ss, CONFIG.CP_SYNC_LOG_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.CP_SYNC_LOG_SHEET_NAME);
     var header = ['Timestamp', 'Rows Read (2025 tab)', 'Rows Read (2026 tab)', 'Rows Written', 'TAT Values Repaired', 'Status'];
@@ -149,13 +157,13 @@ function consolidateCpTasks() {
       allRows.length, CONFIG.CP_MASTER_SHEET_NAME);
   } catch (err) {
     var errMessage = (err && err.message) || String(err);
-    sendErrorAlert_('CP consolidation failed', errMessage);
     if (cpWorkbook) {
       appendCpSyncLogEntry_(cpWorkbook, {
         timestamp: new Date(), rowsRead2025: '', rowsRead2026: '',
         rowsWritten: 0, tatRepaired: 0, status: 'Error: ' + errMessage
       });
     }
+    sendErrorAlert_('CP consolidation failed', errMessage);
     return;
   }
 

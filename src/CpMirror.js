@@ -8,14 +8,14 @@
 function mirrorCpMaster() {
   try {
     var cpWorkbook = SpreadsheetApp.openById(CONFIG.CP_WORKBOOK_SHEET_ID);
-    var source = cpWorkbook.getSheetByName(CONFIG.CP_MASTER_SHEET_NAME);
+    var source = resolveSheetByExactName_(cpWorkbook, CONFIG.CP_MASTER_SHEET_NAME);
     if (!source || source.getLastRow() < 2) {
       Logger.log('CP Master has no data rows — nothing to mirror.');
       return;
     }
 
     var targetSs = SpreadsheetApp.openById(CONFIG.MASTER_SERVICE_SHEET_ID);
-    var target = targetSs.getSheetByName(CONFIG.CP_MIRROR_SHEET_NAME);
+    var target = resolveSheetByExactName_(targetSs, CONFIG.CP_MIRROR_SHEET_NAME);
     if (!target) {
       target = targetSs.insertSheet(CONFIG.CP_MIRROR_SHEET_NAME);
       Logger.log('Created tab "%s" in "%s".', CONFIG.CP_MIRROR_SHEET_NAME, targetSs.getName());

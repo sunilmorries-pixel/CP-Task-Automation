@@ -28,6 +28,10 @@ SERVICE workbook; every other tab there belongs to that other project.
 See [docs/specs/2026-09-04-cp-task-consolidation-design.md](docs/specs/2026-09-04-cp-task-consolidation-design.md)
 for the full design.
 
+> **`CP Master` is not safe to hand-edit.** Every run fully rebuilds its contents from
+> the two source tabs; anything typed directly into `CP Master` is overwritten on the
+> next run.
+
 ## Operating it
 
 Deploy code changes with `npx clasp push --force`.
@@ -39,7 +43,13 @@ Functions runnable from the Apps Script editor's dropdown:
 | `consolidateCpTasks` | Reads both CP Tasks tabs, rebuilds `CP Master`, then mirrors it |
 | `mirrorCpMaster` | Mirrors `CP Master` into MASTER SERVICE's `CP sheet` tab on its own |
 | `installTriggers` | (Re)installs the daily trigger; clears existing ones first, safe to re-run |
-| `removeAllTriggers_` | Rollback — stops all scheduled runs without touching any data |
+| `removeAllTriggers_` | Rollback — stops all scheduled runs without touching any data (Apps Script's function dropdown may not list a function whose name ends in `_`, by convention treated as private — if it doesn't appear, delete the trigger directly from the Triggers page instead, clock icon in the left sidebar) |
+
+Run the test suite with `npm test`.
+
+CP Task Tracker's `Sync Log` tab records one row per run — timestamp, rows read from
+each source tab, rows written, TAT values repaired, and status — and is the first place
+to check after an alert email.
 
 ## Key resources
 
@@ -54,10 +64,11 @@ Functions runnable from the Apps Script editor's dropdown:
 src/                  Apps Script sources (pushed with clasp)
   Config.js           Resource IDs, schedule, tunables
   Alerts.js           Email (and optional Slack) error alerts
-  SheetHelpers.js      Grid-capacity helper
+  SheetHelpers.js     Exact-name sheet resolution, grid-capacity helper
   CpConsolidate.js    Reads the two CP Tasks tabs, normalizes, rebuilds CP Master
   CpMirror.js         One-way mirror of CP Master into MASTER SERVICE
   Triggers.js         Trigger entry points and installer
+  appsscript.json     Apps Script manifest (scopes, timezone)
   -- pure, unit-tested logic (no Apps Script globals) --
   DateParsing.js      CP's "22 December 2025" date format -> Date
   CpSchema.js         CP column schema and header-name mapping
@@ -75,3 +86,7 @@ docs/                 Design spec and implementation plan
   Master**, even when the same Zoho ticket number appears in both. The two describe
   different things (a CP engineer visit vs. a ServiceWRK ticket lifecycle) tracked in
   two entirely separate automations.
+- **`Sync Log`'s `Status` column reflects only the `CP Master` rebuild step.** If the
+  subsequent mirror into MASTER SERVICE fails, `Sync Log` can still show `Success` for
+  that run; the mirror failure is reported only by its own email alert (subject "CP
+  mirror failed"), not reflected in `Sync Log`.

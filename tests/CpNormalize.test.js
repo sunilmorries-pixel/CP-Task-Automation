@@ -5,6 +5,7 @@ const {
   normalizeCpRow,
   compareCpRowsByCreatedOnDesc
 } = require('../src/CpNormalize');
+const { CP_MASTER_COLUMNS } = require('../src/CpSchema');
 
 // --- computeCpTatDays -------------------------------------------------
 
@@ -152,6 +153,19 @@ test('an unparseable Created On is kept visible as the original text, not droppe
   expect(row['Created On']).toBe('not a date');
   expect(row['Created month']).toBe('');
   expect(row['Created Year']).toBe('');
+});
+
+test('normalizeCpRow output has exactly the CP_MASTER_COLUMNS keys, in that order', () => {
+  const raw = {
+    'CP Name': 'X', 'Engineer name': 'Y', 'Created month': 'January',
+    'Created On': '1 January 2026', 'Zoho': 'NA', 'Customer ID': '1',
+    'Customer Name': 'Z', 'Customer Address': '', 'Service Type': '',
+    'Problem Description': '', 'Ticket Type': '', 'Ticket Status': 'Completed',
+    'Closure comments': '', 'Closed On': '1 January 2026', 'Visit Type': '',
+    'Allocated By': '', 'TAT in days': '0'
+  };
+  const row = normalizeCpRow(raw, 'CP Tasks 2026');
+  expect(Object.keys(row)).toEqual(CP_MASTER_COLUMNS);
 });
 
 // --- compareCpRowsByCreatedOnDesc --------------------------------------
